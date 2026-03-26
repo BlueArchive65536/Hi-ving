@@ -1,193 +1,246 @@
 import { useState, useEffect } from 'react';
+import useCartStore from './store';
+import { motion, AnimatePresence } from 'framer-motion';
+import menuDataFromFile from './menu.json';
 import './App.css'
 
 // Type definitions
-type MenuItem = {
+export type MenuItem = {
   name: string;
   price: number;
   image: string;
 };
 
-type OrderItem = MenuItem & { quantity: number };
+export type OrderItem = MenuItem & { quantity: number };
 
-type Menu = {
+export type Menu = {
   [category: string]: MenuItem[];
-};
-
-// Sample menu data
-const menuData: Menu = {
-  '덮밥': [
-    { name: '소고기덮밥', price: 12000, image: 'https://via.placeholder.com/150' }, { name: '돼지고기덮밥', price: 11000, image: 'https://via.placeholder.com/150' },
-    { name: '치킨덮밥', price: 10000, image: 'https://via.placeholder.com/150' }, { name: '연어덮밥', price: 13000, image: 'https://via.placeholder.com/150' },
-  ],
-  '라면': [
-    { name: '기본라면', price: 5000, image: 'https://via.placeholder.com/150' }, { name: '치즈라면', price: 6000, image: 'https://via.placeholder.com/150' },
-    { name: '해물라면', price: 7000, image: 'https://via.placeholder.com/150' }, { name: '떡만두라면', price: 7000, image: 'https://via.placeholder.com/150' },
-  ],
-  '김밥': [
-    { name: '야채김밥', price: 4000, image: 'https://via.placeholder.com/150' }, { name: '참치김밥', price: 5000, image: 'https://via.placeholder.com/150' },
-    { name: '소고기김밥', price: 6000, image: 'https://via.placeholder.com/150' }, { name: '치즈김밥', price: 5000, image: 'https://via.placeholder.com/150' },
-  ],
-  '찜류': [
-    { name: '갈비찜', price: 25000, image: 'https://via.placeholder.com/150' }, { name: '해물찜', price: 30000, image: 'https://via.placeholder.com/150' },
-    { name: '아구찜', price: 28000, image: 'https://via.placeholder.com/150' },
-  ],
-  '직원 호출': [
-    { name: '불판갈기', price: 0, image: 'https://via.placeholder.com/150' }, { name: '숯갈기', price: 0, image: 'https://via.placeholder.com/150' },
-    { name: '담당개발자 호출', price: 0, image: 'https://via.placeholder.com/150' },
-  ],
 };
 
 const RESTAURANT_NAME = "무슨무슨 식당";
 const TABLE_NUMBER = "X번 테이블";
 
+const viewVariants = {
+  initial: { opacity: 0, scale: 0.98 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.98 },
+};
+
+const viewTransition = {
+  type: 'spring',
+  stiffness: 300,
+  damping: 30,
+};
+
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5분
+
 function App() {
   const [view, setView] = useState('welcome');
-  const [order, setOrder] = useState<OrderItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('덮밥');
+  const [menuData, setMenuData] = useState<Menu | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { order, addToOrder, updateOrderItemQuantity, clearOrder } = useCartStore();
 
   useEffect(() => {
     if (view === 'complete') {
       const timer = setTimeout(() => {
         setView('welcome');
-        setOrder([]);
+        clearOrder();
       }, 5000);
       return () => clearTimeout(timer);
     }
   }, [view]);
 
-  const addToOrder = (item: MenuItem) => {
-    setOrder(currentOrder => {
-      const existingItem = currentOrder.find(orderItem => orderItem.name === item.name);
-      if (existingItem) {
-        return currentOrder.map(orderItem =>
-          orderItem.name === item.name
-            ? { ...orderItem, quantity: orderItem.quantity + 1 }
-            : orderItem
-        );
-      }
-      return [...currentOrder, { ...item, quantity: 1 }];
-    });
-  };
+  useEffect(() => {
+    const data = menuDataFromFile as Menu;
+    setMenuData(data);
+    if (data && Object.keys(data).length > 0) {
+      setSelectedCategory(Object.keys(data)[0]);
+    }
+  }, []);
 
-  const updateOrderItemQuantity = (itemName: string, change: number) => {
-    setOrder(currentOrder => {
-      const updatedOrder = currentOrder
-        .map(item =>
-          item.name === itemName
-            ? { ...item, quantity: item.quantity + change }
-            : item
-        )
-        .filter(item => item.quantity > 0);
+  useEffect(() => {
+    if (order.length === 0 && view === 'confirm') {
+      setView('menu');
+    }
+  }, [order, view]);
 
-      if (updatedOrder.length === 0 && view === 'confirm') {
-        setView('menu');
-      }
-      return updatedOrder;
-    });
-  };
+  // 자동 세션 초기화를 위한 비활성 타이머 설정
+  useEffect(() => {
+    // 시작 화면에 있거나, 주문이 완료된 직후에는 타이머를 실행하지 않습니다.
+    if (view === 'welcome' || view === 'complete') {
+      return;
+    }
+
+    let inactivityTimer: number;
+
+    const resetSession = () => {
+      setView('welcome');
+      clearOrder();
+    };
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = window.setTimeout(resetSession, INACTIVITY_TIMEOUT);
+    };
+
+    const activityEvents: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => window.addEventListener(event, resetTimer));
+    resetTimer(); // 초기 타이머 설정
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [view, clearOrder]);
 
   const total = order.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const renderWelcome = () => (
-    <div className="bg-emerald-950 text-white h-screen w-screen font-sans" onClick={() => setView('menu')}>
-      <header className="flex justify-between items-center p-4 text-4xl bg-black bg-opacity-20 h-[80px]">
-        <h1>{RESTAURANT_NAME}</h1>
-        <span>{TABLE_NUMBER}</span>
+    <motion.div
+      key="welcome"
+      variants={viewVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={viewTransition}
+      className="bg-white h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans text-black" onClick={() => setView('menu')}
+    >
+      <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
+        <h1 className="text-black">{RESTAURANT_NAME}</h1>
+        <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col justify-center items-center h-[calc(100vh-80px)] cursor-pointer">
+      <div className="flex flex-col justify-center items-center h-[calc(100vh/1.2-80px)] cursor-pointer">
         <div className="text-center">
-          <h2 className="text-6xl mb-24">광고: 뭐</h2>
-          <h1 className="text-7xl">화면을 눌러 주문하기</h1>
+          <h2 className="text-6xl mb-24 !text-black">광고: 뭐</h2>
+          <h1 className="text-7xl !text-black">화면을 눌러 주문하기</h1>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 
-  const renderMenu = () => (
-    <main className="bg-emerald-950 text-white h-screen w-screen font-sans relative">
-      <header className="flex justify-between items-center p-4 text-4xl bg-black bg-opacity-30 h-[80px]">
-        <h1>{RESTAURANT_NAME}</h1>
-        <span>{TABLE_NUMBER}</span>
+  const renderMenu = () => {
+    if (!menuData || !selectedCategory) {
+      return (
+        <div className="bg-white h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] flex justify-center items-center">
+          <h1 className="text-4xl !text-black">메뉴를 불러오는 중입니다...</h1>
+        </div>
+      );
+    }
+
+    return (
+      <motion.main
+        key="menu"
+        variants={viewVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={viewTransition}
+        className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans relative"
+      >
+      <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
+        <h1 className="text-black">{RESTAURANT_NAME}</h1>
+        <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex h-[calc(100vh/1.2-80px)]">
         {/* PDF 디자인에 맞춰 카테고리 사이드바와 메뉴 목록 사이에 구분선을 추가합니다. */}
-        <div className="w-1/5 bg-emerald-900 p-4 flex flex-col border-r-2 border-white/20">
-          {Object.keys(menuData).map(category => (
-            <button
+        <div className="w-1/5 bg-gray-50 p-4 flex flex-col border-r-2 border-gray-200">
+          {Object.keys(menuData).map((category) => (
+            <motion.button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`text-3xl text-white p-4 mb-4 rounded ${selectedCategory === category ? 'bg-emerald-600' : 'bg-emerald-800 hover:bg-emerald-700'}`}
+              className={`text-3xl p-4 mb-4 rounded ${selectedCategory === category ? 'bg-emerald-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black'}`}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
               {category}
-            </button>
+            </motion.button>
           ))}
-          <button
+          <motion.button
             onClick={() => setView('confirm')}
-            className="mt-auto text-3xl p-4 rounded bg-gray-200 text-gray-800"
-            className="mt-auto text-3xl p-4 rounded bg-emerald-500 text-white"
+            className="mt-auto text-3xl p-4 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            whileTap={{ scale: 0.95 }}
           >
             메뉴선택 완료
-          </button>
+          </motion.button>
         </div>
         <div className="w-4/5 p-4 overflow-y-auto">
           <div className="grid grid-cols-4 gap-4">
             {menuData[selectedCategory].map(item => (
-              <div
+              <motion.div
                 key={item.name}
                 onClick={() => addToOrder(item)}
-                className="bg-emerald-800 rounded-lg flex flex-col cursor-pointer hover:bg-emerald-700 overflow-hidden"
+                className="bg-white border border-gray-200 rounded-lg flex flex-col cursor-pointer hover:bg-gray-100 overflow-hidden shadow-sm"
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <img src={item.image} alt={item.name} className="w-full h-3/5 object-cover" />
                 <div className="p-2 flex flex-col justify-center flex-grow">
-                  <p className="text-xl text-center font-semibold">{item.name}</p>
-                  <p className="text-lg text-center mt-1">{item.price > 0 ? `${item.price.toLocaleString()}원` : '\u00A0'}</p>
+                  <p className="text-xl text-center font-semibold text-black">{item.name}</p>
+                  <p className="text-lg text-center mt-1 text-gray-600">{item.price > 0 ? `${item.price.toLocaleString()}원` : '\u00A0'}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-        {order.length > 0 && (
-          <div className="absolute bottom-8 right-8 bg-black bg-opacity-70 p-6 rounded-lg w-[400px] shadow-lg">
-            <h3 className="text-2xl font-bold border-b border-white/30 pb-2 mb-4">주문 내역</h3>
-            <div className="max-h-48 overflow-y-auto pr-2">
-              {order.map(item => (
-                <div key={item.name} className="flex justify-between text-lg mb-2">
-                  <span>{item.name} x{item.quantity}</span>
-                  <span>{(item.price * item.quantity).toLocaleString()}원</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-white/30 pt-4 mt-4 flex justify-between font-bold text-xl">
-              <span>총 금액</span>
-              <span>{total.toLocaleString()}원</span>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {order.length > 0 && (
+            <motion.div
+              className="absolute bottom-8 right-8 bg-white border border-gray-200 p-6 rounded-lg w-[400px] shadow-lg"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <h3 className="text-2xl font-bold border-b border-gray-200 pb-2 mb-4 text-black">주문 내역</h3>
+              <div className="max-h-48 overflow-y-auto pr-2">
+                {order.map(item => (
+                  <div key={item.name} className="flex justify-between text-lg mb-2 text-black">
+                    <span>{item.name} x{item.quantity}</span>
+                    <span>{(item.price * item.quantity).toLocaleString()}원</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between font-bold text-xl text-black">
+                <span>총 금액</span>
+                <span>{total.toLocaleString()}원</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </main>
-  );
+      </motion.main>
+    );
+  };
 
   const renderConfirm = () => (
-    <main className="bg-emerald-950 text-white h-screen w-screen font-sans">
-      <header className="flex justify-between items-center p-4 text-4xl bg-black bg-opacity-30 h-[80px]">
-        <h1>{RESTAURANT_NAME}</h1>
-        <span>{TABLE_NUMBER}</span>
+    <motion.main
+      key="confirm"
+      variants={viewVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={viewTransition}
+      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans"
+    >
+      <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
+        <h1 className="text-black">{RESTAURANT_NAME}</h1>
+        <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col h-[calc(100vh-80px)] p-8">
+      <div className="flex flex-col h-[calc(100vh/1.2-80px)] p-8">
         <div className="flex-grow overflow-y-auto pr-4">
           <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-3xl">
             {order.map(item => (
-              <div key={item.name} className="flex justify-between items-center w-full text-2xl">
+              <div key={item.name} className="flex justify-between items-center w-full text-2xl text-black">
                 <span className="flex-1">{item.name}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => updateOrderItemQuantity(item.name, -1)} className="bg-emerald-700 hover:bg-emerald-600 rounded-md w-10 h-10 text-white text-3xl flex items-center justify-center transition-colors">
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, -1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-10 h-10 text-black text-3xl flex items-center justify-center transition-colors">
                     -
-                  </button>
+                  </motion.button>
                   <span className="w-12 text-center font-bold">{item.quantity}</span>
-                  <button onClick={() => updateOrderItemQuantity(item.name, 1)} className="bg-emerald-700 hover:bg-emerald-600 rounded-md w-10 h-10 text-white text-3xl flex items-center justify-center transition-colors">
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, 1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-10 h-10 text-black text-3xl flex items-center justify-center transition-colors">
                     +
-                  </button>
+                  </motion.button>
                 </div>
                 <span className="w-40 text-right">
                   {(item.price * item.quantity).toLocaleString()}원
@@ -196,72 +249,92 @@ function App() {
             ))}
           </div>
         </div>
-        <div className="border-t-2 border-white pt-6 mt-6">
-          <div className="flex justify-between text-4xl font-bold mb-8">
+        <div className="border-t-2 border-gray-200 pt-6 mt-6">
+          <div className="flex justify-between text-4xl font-bold mb-8 text-black">
             <h2>최종 금액</h2>
             <span>{total.toLocaleString()}원</span>
           </div>
-          <button
+          <motion.button
             onClick={() => setView('payment')}
-            className="w-full text-4xl p-6 rounded bg-emerald-500 text-white"
+            className="w-full text-4xl p-6 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            whileTap={{ scale: 0.98 }}
           >
             주문 완료하기
-          </button>
+          </motion.button>
         </div>
       </div>
-    </main>
+    </motion.main>
   );
 
   const renderPayment = () => (
-    <main className="bg-emerald-950 text-white h-screen w-screen font-sans">
-      <header className="flex justify-between items-center p-4 text-4xl bg-black bg-opacity-30 h-[80px]">
-        <h1>{RESTAURANT_NAME}</h1>
-        <span>{TABLE_NUMBER}</span>
+    <motion.main
+      key="payment"
+      variants={viewVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={viewTransition}
+      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans"
+    >
+      <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
+        <h1 className="text-black">{RESTAURANT_NAME}</h1>
+        <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col justify-center items-center h-[calc(100vh-80px)] p-8">
-        <div className="bg-emerald-900 p-12 rounded-lg shadow-lg text-center w-full max-w-2xl">
-          <h2 className="text-5xl font-bold mb-8">결제하기</h2>
-          <div className="flex justify-between text-4xl font-bold mb-12 py-6 border-y-2 border-white/30">
+      <div className="flex flex-col justify-center items-center h-[calc(100vh/1.2-80px)] p-8">
+        <div className="bg-gray-50 p-12 rounded-lg shadow-lg text-center w-full max-w-2xl">
+          <h2 className="text-5xl font-bold mb-8 text-black">결제하기</h2>
+          <div className="flex justify-between text-4xl font-bold mb-12 py-6 border-y-2 border-gray-200 text-black">
             <h3>최종 금액</h3>
             <span>{total.toLocaleString()}원</span>
           </div>
-          <p className="text-2xl mb-8">결제 수단을 선택해주세요.</p>
+          <p className="text-2xl mb-8 text-black">결제 수단을 선택해주세요.</p>
           <div className="flex gap-8 justify-center">
-            <button
+            <motion.button
               onClick={() => setView('complete')}
-              className="w-1/2 text-4xl p-8 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+              className="w-1/2 text-4xl p-8 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              whileTap={{ scale: 0.95 }}
             >
               카드 결제
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setView('complete')}
-              className="w-1/2 text-4xl p-8 rounded bg-gray-500 text-white hover:bg-gray-600 transition-colors"
+              className="w-1/2 text-4xl p-8 rounded bg-gray-700 text-white hover:bg-gray-800 transition-colors"
+              whileTap={{ scale: 0.95 }}
             >
               현금 결제
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
-    </main>
+    </motion.main>
   );
 
   const renderComplete = () => (
-    <div className="bg-emerald-950 text-white h-screen w-screen font-sans flex flex-col justify-center items-center">
+    <motion.div
+      key="complete"
+      variants={viewVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={viewTransition}
+      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans flex flex-col justify-center items-center"
+    >
       <div className="text-center">
-        <h1 className="text-6xl mb-8">주문이 완료되었습니다.</h1>
-        <p className="text-4xl">5초 후 처음으로 돌아갑니다.</p>
+        <h1 className="text-6xl mb-8 !text-black">주문이 완료되었습니다.</h1>
+        <p className="text-4xl !text-black">5초 후 처음으로 돌아갑니다.</p>
       </div>
-    </div>
+    </motion.div>
   );
 
-  switch (view) {
-    case 'welcome': return renderWelcome();
-    case 'menu': return renderMenu();
-    case 'confirm': return renderConfirm();
-    case 'payment': return renderPayment();
-    case 'complete': return renderComplete();
-    default: return renderWelcome();
-  }
+  return (
+    <AnimatePresence mode="wait">
+      {view === 'welcome' && renderWelcome()}
+      {view === 'menu' && renderMenu()}
+      {view === 'confirm' && renderConfirm()}
+      {view === 'payment' && renderPayment()}
+      {view === 'complete' && renderComplete()}
+    </AnimatePresence>
+  );
 }
 
 export default App
