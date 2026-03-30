@@ -26,11 +26,12 @@ const viewVariants = {
   exit: { opacity: 0, scale: 0.98 },
 };
 
-const viewTransition = {
+// transition type에 따른 속성을 다르게 설정해야 합니다.
+const motionPageTransition = {
   type: 'spring',
   stiffness: 300,
   damping: 30,
-};
+} as const;
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5분
 
@@ -102,16 +103,16 @@ function App() {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={viewTransition}
-      className="bg-white h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans text-black" onClick={() => setView('menu')}
+      transition={motionPageTransition}
+      className="bg-white h-screen w-screen font-sans text-black" onClick={() => setView('menu')}
     >
       <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
         <h1 className="text-black">{RESTAURANT_NAME}</h1>
         <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col justify-center items-center h-[calc(100vh/1.2-80px)] cursor-pointer">
+      <div className="flex flex-col justify-center items-center h-[calc(100vh-80px)] cursor-pointer">
         <div className="text-center">
-          <h2 className="text-6xl mb-24 !text-black">광고: 뭐</h2>
+          <img src="https://placehold.co/800x450.png" alt="광고" className="mb-24 w-[800px] h-[450px] object-cover" />
           <h1 className="text-7xl !text-black">화면을 눌러 주문하기</h1>
         </div>
       </div>
@@ -121,7 +122,7 @@ function App() {
   const renderMenu = () => {
     if (!menuData || !selectedCategory) {
       return (
-        <div className="bg-white h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] flex justify-center items-center">
+        <div className="bg-white h-screen w-screen flex justify-center items-center">
           <h1 className="text-4xl !text-black">메뉴를 불러오는 중입니다...</h1>
         </div>
       );
@@ -134,14 +135,14 @@ function App() {
         initial="initial"
         animate="animate"
         exit="exit"
-        transition={viewTransition}
-        className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans relative"
+        transition={motionPageTransition}
+        className="bg-white text-black h-screen w-screen font-sans relative"
       >
       <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
         <h1 className="text-black">{RESTAURANT_NAME}</h1>
         <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex h-[calc(100vh/1.2-80px)]">
+      <div className="flex h-[calc(100vh-80px)]">
         {/* PDF 디자인에 맞춰 카테고리 사이드바와 메뉴 목록 사이에 구분선을 추가합니다. */}
         <div className="w-1/5 bg-gray-50 p-4 flex flex-col border-r-2 border-gray-200">
           {Object.keys(menuData).map((category) => (
@@ -173,7 +174,7 @@ function App() {
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={motionPageTransition}
               >
                 <img src={item.image} alt={item.name} className="w-full h-3/5 object-cover" />
                 <div className="p-2 flex flex-col justify-center flex-grow">
@@ -220,14 +221,14 @@ function App() {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={viewTransition}
-      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans"
+      transition={motionPageTransition}
+      className="bg-white text-black h-screen w-screen font-sans"
     >
       <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
         <h1 className="text-black">{RESTAURANT_NAME}</h1>
         <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col h-[calc(100vh/1.2-80px)] p-8">
+      <div className="flex flex-col h-[calc(100vh-80px)] p-8">
         <div className="flex-grow overflow-y-auto pr-4">
           <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-3xl">
             {order.map(item => (
@@ -273,14 +274,14 @@ function App() {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={viewTransition}
-      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans"
+      transition={motionPageTransition}
+      className="bg-white text-black h-screen w-screen font-sans"
     >
       <header className="flex justify-between items-center p-4 text-4xl bg-gray-100 h-[80px]">
         <h1 className="text-black">{RESTAURANT_NAME}</h1>
         <span className="text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="flex flex-col justify-center items-center h-[calc(100vh/1.2-80px)] p-8">
+      <div className="flex flex-col justify-center items-center h-[calc(100vh-80px)] p-8">
         <div className="bg-gray-50 p-12 rounded-lg shadow-lg text-center w-full max-w-2xl">
           <h2 className="text-5xl font-bold mb-8 text-black">결제하기</h2>
           <div className="flex justify-between text-4xl font-bold mb-12 py-6 border-y-2 border-gray-200 text-black">
@@ -316,8 +317,8 @@ function App() {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={viewTransition}
-      className="bg-white text-black h-[calc(100vh/1.2)] w-[calc(100vw/1.2)] font-sans flex flex-col justify-center items-center"
+      transition={motionPageTransition}
+      className="bg-white text-black h-screen w-screen font-sans flex flex-col justify-center items-center"
     >
       <div className="text-center">
         <h1 className="text-6xl mb-8 !text-black">주문이 완료되었습니다.</h1>
