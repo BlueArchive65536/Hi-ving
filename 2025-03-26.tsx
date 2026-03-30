@@ -1,3 +1,5 @@
+// 몰?루
+
 import { useState, useEffect } from 'react';
 import useCartStore from './store';
 import { motion, AnimatePresence } from 'framer-motion';
