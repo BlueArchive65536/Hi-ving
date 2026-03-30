@@ -1,3 +1,5 @@
+// 몰?루
+
 import { create } from 'zustand';
 import type { MenuItem, OrderItem } from './App';
 
