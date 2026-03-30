@@ -1,0 +1,30 @@
+{
+  "덮밥": [
+    { "name": "소고기덮밥", "price": 12000, "image": "https://placehold.co/600x400.png" },
+    { "name": "돼지고기덮밥", "price": 11000, "image": "https://placehold.co/600x400.png" },
+    { "name": "치킨덮밥", "price": 10000, "image": "https://placehold.co/600x400.png" },
+    { "name": "연어덮밥", "price": 13000, "image": "https://placehold.co/600x400.png" }
+  ],
+  "라면": [
+    { "name": "기본라면", "price": 5000, "image": "https://placehold.co/600x400.png" },
+    { "name": "치즈라면", "price": 6000, "image": "https://placehold.co/600x400.png" },
+    { "name": "해물라면", "price": 7000, "image": "https://placehold.co/600x400.png" },
+    { "name": "떡만두라면", "price": 7000, "image": "https://placehold.co/600x400.png" }
+  ],
+  "김밥": [
+    { "name": "야채김밥", "price": 4000, "image": "https://placehold.co/600x400.png" },
+    { "name": "참치김밥", "price": 5000, "image": "https://placehold.co/600x400.png" },
+    { "name": "소고기김밥", "price": 6000, "image": "https://placehold.co/600x400.png" },
+    { "name": "치즈김밥", "price": 5000, "image": "https://placehold.co/600x400.png" }
+  ],
+  "찜류": [
+    { "name": "갈비찜", "price": 25000, "image": "https://placehold.co/600x400.png" },
+    { "name": "해물찜", "price": 30000, "image": "https://placehold.co/600x400.png" },
+    { "name": "아구찜", "price": 28000, "image": "https://placehold.co/600x400.png" }
+  ],
+  "직원 호출": [
+    { "name": "불판갈기", "price": 0, "image": "https://placehold.co/600x400.png" },
+    { "name": "숯갈기", "price": 0, "image": "https://placehold.co/600x400.png" },
+    { "name": "담당개발자 호출", "price": 0, "image": "https://placehold.co/600x400.png" }
+  ]
+}
