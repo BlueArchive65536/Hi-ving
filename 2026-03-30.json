@@ -1,4 +1,8 @@
 {
+  "Molru": "몰?루"
+}
+
+{
   "덮밥": [
     { "name": "소고기덮밥", "price": 12000, "image": "https://placehold.co/600x400.png" },
     { "name": "돼지고기덮밥", "price": 11000, "image": "https://placehold.co/600x400.png" },
