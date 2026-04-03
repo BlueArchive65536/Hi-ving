@@ -25,13 +25,14 @@ const viewVariants = {
   initial: { opacity: 0, scale: 0.98 },
   animate: { opacity: 1, scale: 1 },
   exit: { opacity: 0, scale: 0.98 },
-};
+}; 
 
 const motionPageTransition = {
   type: 'spring',
   stiffness: 300,
   damping: 30,
 } as const;
+
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
@@ -59,12 +60,6 @@ function App() {
       setSelectedCategory(Object.keys(data)[0]);
     }
   }, []);
-
-  useEffect(() => {
-    if (order.length === 0 && view === 'confirm') {
-      setView('menu');
-    }
-  }, [order, view]);
 
   useEffect(() => {
     if (view === 'welcome' || view === 'complete') {
@@ -103,14 +98,21 @@ function App() {
       animate="animate"
       exit="exit"
       transition={motionPageTransition}
-      className="bg-white h-screen w-screen font-sans text-black" onClick={() => setView('menu')}
+      className="bg-white h-screen w-screen font-sans text-black"
     >
       <header className="flex justify-between items-center p-4 text-5xl bg-gray-100 h-[88px]">
         <h1 className="!text-black">{RESTAURANT_NAME}</h1>
         <span className="!text-black">{TABLE_NUMBER}</span>
       </header>
-      <div className="relative flex flex-col justify-center items-center h-[calc(100vh-88px)] cursor-pointer">
-        <img src="https://placehold.co/800x450.png" alt="광고" className="absolute inset-0 w-full h-full object-cover" />
+      <div
+        className="relative flex flex-col justify-center items-center h-[calc(100vh-88px)] cursor-pointer focus:outline-none focus:ring-4 focus:ring-emerald-500"
+        onClick={() => setView('menu')}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setView('menu')}
+        role="button"
+        tabIndex={0}
+        aria-label="화면을 눌러 주문 시작"
+      >
+        <img src="https://placehold.co/1920x1080.png" alt="광고" className="absolute inset-0 w-full h-full object-cover" />
         <h1 className="text-8xl !text-black z-10 relative">화면을 눌러 주문하기</h1>
       </div>
     </motion.div>
@@ -226,38 +228,58 @@ function App() {
       </header>
       <div className="flex flex-col h-[calc(100vh-88px)] p-8">
         <div className="flex-grow overflow-y-auto pr-4">
-          <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-5xl">
-            {order.map(item => (
-              <div key={item.name} className="flex justify-between items-center w-full text-4xl text-black">
-                <span className="flex-1 text-right pr-4">{item.name}</span>
-                <div className="flex items-center gap-2">
-                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, -1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-11 h-11 text-black text-5xl flex items-center justify-center transition-colors">
-                    -
-                  </motion.button>
-                  <span className="w-14 text-center font-bold">{item.quantity}</span>
-                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, 1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-11 h-11 text-black text-4xl flex items-center justify-center transition-colors">
-                    +
-                  </motion.button>
+          {order.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-5xl">
+              {order.map(item => (
+                <div key={item.name} className="flex justify-between items-center w-full text-4xl text-black">
+                  <span className="flex-1 text-right pr-4">{item.name}</span>
+                  <div className="flex items-center gap-2">
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, -1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-11 h-11 text-black text-5xl flex items-center justify-center transition-colors">
+                      -
+                    </motion.button>
+                    <span className="w-14 text-center font-bold text-4xl">{item.quantity}</span>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => updateOrderItemQuantity(item.name, 1)} className="bg-gray-200 hover:bg-gray-300 rounded-md w-11 h-11 text-black text-4xl flex items-center justify-center transition-colors">
+                      +
+                    </motion.button>
+                  </div>
+                  <span className="w-44 text-right">
+                    {(item.price * item.quantity).toLocaleString()}원
+                  </span>
                 </div>
-                <span className="w-44 text-right">
-                  {(item.price * item.quantity).toLocaleString()}원
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex justify-center items-center h-full">
+              <p className="text-5xl text-gray-400">주문 내역이 비어있습니다</p>
+            </div>
+          )}
         </div>
         <div className="border-t-2 border-gray-200 pt-6 mt-6">
           <div className="flex justify-between text-6xl font-bold mb-8 text-black">
             <h2>최종 금액</h2>
             <span>{total.toLocaleString()}원</span>
           </div>
-          <motion.button
-            onClick={() => setShowPaymentOverlay(true)}
-            className="w-full text-5xl p-6 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-            whileTap={{ scale: 0.98 }}
-          >
-            주문 완료하기
-          </motion.button>
+          <div className="flex gap-4">
+            <motion.button
+              onClick={() => setView('menu')}
+              className="w-1/3 text-5xl p-6 rounded bg-gray-300 text-black hover:bg-gray-400 transition-colors"
+              whileTap={{ scale: 0.98 }}
+            >
+              뒤로가기
+            </motion.button>
+            <motion.button
+              onClick={() => setShowPaymentOverlay(true)}
+              disabled={order.length === 0}
+              className={`w-2/3 text-5xl p-6 rounded transition-colors ${
+                order.length > 0
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              whileTap={order.length > 0 ? { scale: 0.98 } : {}}
+            >
+              주문 완료하기
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.main>
@@ -304,6 +326,13 @@ function App() {
                 현금 결제
               </motion.button>
             </div>
+            <motion.button
+              onClick={() => setShowPaymentOverlay(false)}
+              className="mt-8 w-full text-4xl p-6 rounded bg-gray-300 text-black hover:bg-gray-400 transition-colors"
+              whileTap={{ scale: 0.95 }}
+            >
+              뒤로가기
+            </motion.button>
           </motion.div>
         </motion.div>
       )}
@@ -321,7 +350,7 @@ function App() {
       className="bg-white text-black h-screen w-screen font-sans flex flex-col justify-center items-center"
     >
       <div className="text-center">
-        <h1 className="text-8xl mb-8 text-black">주문이 완료되었습니다.</h1>
+        <h1 className="text-8xl mb-8 !text-black">주문이 완료되었습니다.</h1>
         <p className="text-6xl text-black">5초 후 처음으로 돌아갑니다.</p>
       </div>
     </motion.div>
@@ -340,4 +369,4 @@ function App() {
   );
 }
 
-export default App
+export default App    
